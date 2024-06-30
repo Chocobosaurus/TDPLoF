@@ -4,6 +4,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.gridspec as gridspec
 
 import pandas as pd
 import scipy.stats as stats
@@ -102,6 +103,7 @@ def expected_value_and_std_of_y_given_x(model, x_values):
 
 parser = argparse.ArgumentParser(description='Process an Excel file.')
 parser.add_argument('ExcelFile', metavar='ExcelFile', type=str, help='the path to an Excel file')
+parser.add_argument('--noremove_fails', action='store_true', help='Do not remove the failed cells')
 args = parser.parse_args()
 
 intensity = 'nucTDPintensity_normalized'
@@ -144,16 +146,24 @@ labels = gmm.predict(data)
 for i, weight in enumerate(gmm.weights_):
     print(f"Proportion of Gaussian {i+1}: {weight}")
 
-# Create a new figure
-fig, axx = plt.subplots(2, 1, sharex=True)
+centers = gmm.means_
 
-ax = axx[0]
-# Plot the classified data
-scatter = ax.scatter(data[:, 0], data[:, 1], c=labels, cmap='viridis')
+colormap = plt.get_cmap('viridis', gmm.n_components)
+# Create a gridspec
+gs = gridspec.GridSpec(2, 2, width_ratios=[3, 1], height_ratios=[1, 3])
+
+ax_main = plt.subplot(gs[1, 0])
+ax_xDist = plt.subplot(gs[0, 0], sharex=ax_main)
+ax_yDist = plt.subplot(gs[1, 1], sharey=ax_main)
+
+cluster_names = ['Ate lentils & got cured', 'Didn\'t eat lentils', 'Ate lentils but still sick']
+# Create a scatter plot in the larger subplot
+for i in range(gmm.n_components):
+    ax_main.scatter(data[labels == i, 0], data[labels == i, 1], c=colormap(i), label=cluster_names[i])
+
 
 # Plot the centers of the Gaussians
-centers = gmm.means_
-ax.scatter(centers[:, 0], centers[:, 1], c='red', s=100, alpha=0.7)
+ax_main.scatter(centers[:, 0], centers[:, 1], c='red', s=100, alpha=0.7)
 
 # Plot ovals corresponding to one and two standard deviations
 for i in range(gmm.n_components):
@@ -164,34 +174,22 @@ for i in range(gmm.n_components):
     v = 2. * np.sqrt(2.) * np.sqrt(v)
     for j in [1, 2]:
         ell = patches.Ellipse(gmm.means_[i, :2], j * v[0], j * v[1], angle=180 + angle, color='black')
-        ell.set_clip_box(ax.bbox)
+        ell.set_clip_box(ax_main.bbox)
         ell.set_alpha(0.1)
-        ax.add_artist(ell)
+        ax_main.add_artist(ell)
 
 # add the outliers
-ax.scatter(outliers[intensity], outliers[redness], c='black', s=10, marker='x')
+ax_main.scatter(outliers[intensity], outliers[redness], c='black', s=10, marker='x', label='Dead AF')
 # plot the line
 x = np.linspace(4.75, 8.75, 100)
 y = m * x + b
-ax.plot(x, y, color='black', label='Dead cutoff')
+ax_main.plot(x, y, color='black', label='Dead cutoff')
 
-xx = np.linspace(6.9, 13.5, 100)
-yy, std = expected_value_and_std_of_y_given_x(gmm, xx)
-ax.plot(xx, yy, color='red', label='Expected value of Y given X')
-# plot the standard deviations as a shaded region
-ax.fill_between(xx, yy - std, yy + std, color='red', alpha=0.2)
 
-# Also plot the standard deviation on the axx[1]
-ax = axx[1]
-ax.plot(xx, std, color='red', label='Standard deviation of Y given X')
-ax.set_ylim(0, 2.5)
-
-plt.legend()
-
-for ind in [0, 1]:
+for ind, ax in enumerate([ax_xDist, ax_yDist]):
     # Create a new figure
-    fig, ax = plt.subplots()
-    plt.title(f'Axis {ind+1}')
+    # fig, ax = plt.subplots()
+    # plt.title(f'Axis {ind+1}')
 
     # Define the bins
     minx = data[:, ind].min()
@@ -200,12 +198,12 @@ for ind in [0, 1]:
     binwidth = (maxx - minx) / numbins
     bins = np.linspace(minx, maxx, numbins)
 
-    colormap = plt.get_cmap('viridis', gmm.n_components)
+    orientation = 'vertical' if ax == ax_xDist else 'horizontal'
 
     # Separate data into groups based on labels
     for i in range(gmm.n_components):
         group_data = data[labels == i, ind]
-        ax.hist(group_data, bins=bins, alpha=0.5, label=f'Component {i+1}', color=colormap(i))
+        ax.hist(group_data, bins=bins, alpha=0.5, label=f'Component {i+1}', color=colormap(i), orientation=orientation)
 
     # Plot the PDF of each Gaussian along the x-axis
     for i in range(gmm.n_components):
@@ -216,9 +214,57 @@ for ind in [0, 1]:
         y = stats.norm.pdf(x, mean, np.sqrt(var))
         # y = weight*stats.norm.pdf(x, mean, np.sqrt(var))
         y *= binwidth * len(data[labels == i])
-        ax.plot(x, y, color=colormap(i), linestyle='--')
+        if orientation == 'vertical':
+            ax.plot(x, y, color=colormap(i), linestyle='--')
+        else:
+            ax.plot(y, x, color=colormap(i), linestyle='--')
 
     # Add a legend
-    ax.legend()
+    # ax.legend()
+
+if not args.noremove_fails:
+    # remove the cluster without activations
+    # Identify the cluster to remove
+    cluster_to_remove = 2  # for example, to remove the third cluster
+
+    # Remove the corresponding component from the GMM's parameters
+    gmm.weights_ = np.delete(gmm.weights_, cluster_to_remove)
+    gmm.means_ = np.delete(gmm.means_, cluster_to_remove, axis=0)
+    gmm.covariances_ = np.delete(gmm.covariances_, cluster_to_remove, axis=0)
+
+    # Renormalize the weights
+    gmm.weights_ /= gmm.weights_.sum()
+
+    # Update the number of components
+    gmm.n_components -= 1
+
+xx = np.linspace(6.9, 13.5, 100)
+yy, std = expected_value_and_std_of_y_given_x(gmm, xx)
+
+# Plot the new expected value curve
+ax_main.plot(xx, yy, color='blue', label='Expected redness given intensity (2 clusters)')
+ax_main.fill_between(xx, yy - std, yy + std, color='blue', alpha=0.2)
+
+# xx = np.linspace(6.9, 13.5, 100)
+# yy, std = expected_value_and_std_of_y_given_x(gmm, xx)
+# ax_main.plot(xx, yy, color='red', label='Expected redness given intensity')
+# # plot the standard deviations as a shaded region
+# ax_main.fill_between(xx, yy - std, yy + std, color='red', alpha=0.2)
+
+# Also plot the standard deviation on the axx[1]
+# ax = axx[1]
+# ax.plot(xx, std, color='red', label='Standard deviation of Y given X')
+# ax.set_ylim(0, 2.5)
+
+ax_main.set_xlabel('TDP43 Intensity')
+ax_main.set_ylabel('Redness')
+
+ax_main.legend()
+
+# Hide the labels of the histograms
+plt.setp(ax_xDist.get_xticklabels(), visible=False)
+plt.setp(ax_yDist.get_yticklabels(), visible=False)
+
+plt.show()
 
 plt.show()
