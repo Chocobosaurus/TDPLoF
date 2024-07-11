@@ -199,7 +199,7 @@ for i, weight in enumerate(gmm.weights_):
 
 num_points_per_class = [sum(labels == i) for i in range(gmm.n_components)]
 for i, num_points in enumerate(num_points_per_class):
-    print(f"percentage of points in cluster {i + 1}: {num_points / len(labels) * 100:.2f}%")
+    print(f"percentage of points in cluster \"{cluster_names[i]}\": {num_points / len(labels) * 100:.2f}%")
 
 # Plot the centers of the Gaussians
 ax_main.scatter(centers[:, 0], centers[:, 1], c='red', s=100, alpha=0.7)
