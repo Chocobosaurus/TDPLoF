@@ -1,4 +1,4 @@
-# Clustering analysis of shRNA TDP-43 knockdown treated TDP-REG cells on TDP-43 intensity and reporter intensity
+# Gaussian Mixture Model (GMM) clustering analysis based on the measured mScarlett and nuclear TDP-43 signal of TDP-REG SH-SY5Y cells post TDP-43 knockdown via shRNA
 
 Here we describe the process of generating the clustering analysis from cells with TDP-43 knockdown and the activation of TDP-REG reporter as in our manuscript (Fig.S5F)
 To use, orient to the folder that contains the script, then 
