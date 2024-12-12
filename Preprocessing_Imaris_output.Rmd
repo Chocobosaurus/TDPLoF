@@ -1,0 +1,68 @@
+---
+title: "Imaris batch output into desired values for GMM"
+author: "WZ"
+date: "2024-12-06"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Preprocessing of the data output from Imaris batch job}
+
+library(dplyr)
+library(stringr)
+library(tibble)
+library(openxlsx)
+
+setwd("~/Desktop/TDPLoF/GMM_rep")
+
+variables <- c("TDPintsum", "mSintsum", "dapivol")
+reps <- c("rep1", "rep2", "rep3")
+dfs <- list()
+
+for (var in variables){
+  df <- read.csv(file.path(paste0(var, "_Statistics/", 
+                                  var, "_Scatter_Plot_1D.csv")), skip = 3, header = T)
+  df <- df[c(colnames(df)[1], "Original.ID", "Original.Image.Name")]
+  print(paste("The values of", var, "are on", colnames(df)[1]))
+  dfs[[var]] <- df
+}
+
+# Split by reps
+splitreps <- function(x){
+  replicates <- list()
+  for (rep in reps){
+    replicates[[rep]] <- x[grep(rep, df$Original.Image.Name), ]
+  }
+  return(replicates)
+}
+
+splited <- sapply(dfs, splitreps)
+
+# Normalize to dapivol
+for (rep in reps){
+  for (var in 1:3){
+    splited[rep, ][[var]]$normed_to_dapivol <- splited[rep, ][[var]][, 1] / splited[rep, ][["dapivol"]][, 1]
+  }
+}
+
+# log10 transform
+for (rep in reps){
+  for (var in 1:3){
+    splited[rep, ][[var]]$log_transformed <- log(splited[rep, ][[var]][, 4])
+  }
+}
+
+
+for (rep in reps){
+  out <- data.frame(nucTDP_intensity_normalized_log = splited[rep, ][[1]][, 5])
+  out$reporter_intensity_normalized_log <- splited[rep, ][[2]][, 5]
+  out$obj_index <- splited[rep, ][[2]][, 2]
+  file_path_out <- file.path(paste0(rep, ".xlsx"))
+  write.xlsx(out, file_path_out, colNames = T)
+}
+
+```

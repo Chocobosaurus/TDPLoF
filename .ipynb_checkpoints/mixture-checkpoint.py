@@ -259,7 +259,7 @@ ax_main.fill_between(xx, yy - std, yy + std, color='blue', alpha=0.2)
 ax_main.set_xlabel('TDP43 Intensity')
 ax_main.set_ylabel('Redness')
 
-ax_main.legend()
+# ax_main.legend()
 
 # Hide the labels of the histograms
 plt.setp(ax_xDist.get_xticklabels(), visible=False)
