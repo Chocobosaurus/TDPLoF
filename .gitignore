@@ -2,3 +2,5 @@
 .~lock.*
 .ipynb_checkpoints/
 .DS_Store
+rawdata_Imaris_output/.DS_Store
+*.DS_Store
