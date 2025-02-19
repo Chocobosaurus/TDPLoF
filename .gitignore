@@ -4,9 +4,9 @@
 .DS_Store
 rawdata_Imaris_output/.DS_Store
 *.DS_Store
-.dapi2000_input/
-.lowinp_bulk_quickresult.pptx
-.sortingplan_for_SCP_v2.pptx
-.GMM_on_LV_TDP_KD_1.py
-.GMMprev_auto.xlsx
-.rawdata_Imaris_output/dapi_2000/
+dapi2000_input/
+lowinp_bulk_quickresult.pptx
+sortingplan_for_SCP_v2.pptx
+GMM_on_LV_TDP_KD_1.py
+GMMprev_auto.xlsx
+rawdata_Imaris_output/dapi_2000/
